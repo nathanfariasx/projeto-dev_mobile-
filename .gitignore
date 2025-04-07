@@ -1,0 +1,24 @@
+# Diretório de módulos do Node.js
+node_modules/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Arquivos de ambiente
+.env
+
+# Arquivo de chave de serviço do Firebase
+serviceAccountKey.json
+
+# Outros arquivos sensíveis
+*.secret
+*.key
+
+# Docker override (se houver)
+docker-compose.override.yml
+
+# Outras pastas de build ou temporárias (ajuste conforme necessário)
+dist/
+build/

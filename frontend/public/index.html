@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>StudyTrack Test App</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        input, button { padding: 8px; margin: 5px; }
+        section { border: 1px solid #ccc; padding: 10px; margin-bottom: 20px; }
+        h2 { margin-top: 0; }
+        ul { list-style: none; padding: 0; }
+        li { padding: 5px; border: 1px solid #eee; margin-bottom: 5px; cursor: pointer; }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+<h1>StudyTrack Test App</h1>
+
+<!-- Seção de Cadastro -->
+<section id="register-section">
+    <h2>Cadastro</h2>
+    <form id="register-form">
+        <input id="register-email" type="email" placeholder="Email" required />
+        <input id="register-password" type="password" placeholder="Senha" required />
+        <input id="register-displayName" type="text" placeholder="Nome Completo" required />
+        <button type="submit">Cadastrar</button>
+    </form>
+    <div id="register-message"></div>
+    <p>Já tem conta? <a href="#" id="show-login">Faça login aqui</a></p>
+</section>
+
+<!-- Seção de Login -->
+<section id="login-section" class="hidden">
+    <h2>Login</h2>
+    <form id="login-form">
+        <input id="login-email" type="email" placeholder="Email" required />
+        <input id="login-password" type="password" placeholder="Senha" required />
+        <button type="submit">Login</button>
+    </form>
+    <div id="login-message"></div>
+    <p>Não tem conta? <a href="#" id="show-register">Cadastre-se aqui</a></p>
+</section>
+
+<!-- Dashboard (após login) -->
+<section id="dashboard-section" class="hidden">
+    <h2>Dashboard</h2>
+    <p>Bem-vindo, <span id="user-email"></span></p>
+
+    <!-- Seção para criar Matéria -->
+    <section id="subject-section">
+        <h3>Criar Matéria</h3>
+        <form id="subject-form">
+            <input id="subject-name" type="text" placeholder="Nome da Matéria" required />
+            <button type="submit">Criar Matéria</button>
+        </form>
+        <div id="subject-message"></div>
+        <h4>Matérias Criadas:</h4>
+        <ul id="subject-list"></ul>
+    </section>
+
+    <!-- Seção para criar Assunto em uma Matéria -->
+    <section id="topic-section" class="hidden">
+        <h3>Criar Assunto para Matéria: <span id="selected-subject-name"></span></h3>
+        <form id="topic-form">
+            <input id="topic-name" type="text" placeholder="Nome do Assunto" required />
+            <button type="submit">Criar Assunto</button>
+        </form>
+        <div id="topic-message"></div>
+        <h4>Assuntos Criados:</h4>
+        <ul id="topic-list"></ul>
+    </section>
+
+    <!-- Seção para registrar Horas em um Assunto -->
+    <section id="hours-section" class="hidden">
+        <h3>Registrar Horas para Assunto: <span id="selected-topic-name"></span></h3>
+        <form id="hours-form">
+            <input id="hours-amount" type="number" placeholder="Horas Estudadas" required />
+            <button type="submit">Registrar Horas</button>
+        </form>
+        <div id="hours-message"></div>
+    </section>
+</section>
+
+<!-- Campos ocultos para armazenar IDs selecionados -->
+<input type="hidden" id="selected-subject-id" />
+<input type="hidden" id="selected-topic-id" />
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import {
+        getAuth,
+        createUserWithEmailAndPassword,
+        signInWithEmailAndPassword
+    } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+    // Configuração do Firebase – substitua conforme seu projeto
+    const firebaseConfig = {
+        apiKey: "AIzaSyDKUUdNbTbbtTrcqNbhq9ZE4WUcElsqdW0",
+        authDomain: "studytrack-proj.firebaseapp.com",
+        projectId: "studytrack-proj",
+        storageBucket: "studytrack-proj.firebasestorage.app",
+        messagingSenderId: "74357844875",
+        appId: "1:74357844875:web:0a871058c3559b31771d8e",
+        measurementId: "G-WX3H9GJKR0"
+    };
+
+    // Inicializa o Firebase
+    const appFirebase = initializeApp(firebaseConfig);
+    const auth = getAuth(appFirebase);
+
+    let currentToken = "";
+    let currentUser = null;
+
+    // Alterna entre as seções de login e cadastro
+    const registerSection = document.getElementById("register-section");
+    const loginSection = document.getElementById("login-section");
+    document.getElementById("show-login").addEventListener("click", (e) => {
+        e.preventDefault();
+        registerSection.classList.add("hidden");
+        loginSection.classList.remove("hidden");
+    });
+    document.getElementById("show-register").addEventListener("click", (e) => {
+        e.preventDefault();
+        loginSection.classList.add("hidden");
+        registerSection.classList.remove("hidden");
+    });
+
+    // Cadastro de Usuário
+    const registerForm = document.getElementById("register-form");
+    registerForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const email = document.getElementById("register-email").value;
+        const password = document.getElementById("register-password").value;
+        const displayName = document.getElementById("register-displayName").value;
+        const registerMessage = document.getElementById("register-message");
+
+        try {
+            const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+            // Opcional: aqui você pode atualizar o perfil do usuário com o displayName
+            registerMessage.innerText = "Cadastro realizado com sucesso! Por favor, faça login.";
+            // Alterna para a seção de login
+            registerSection.classList.add("hidden");
+            loginSection.classList.remove("hidden");
+        } catch (error) {
+            registerMessage.innerText = "Erro no cadastro: " + error.message;
+        }
+    });
+
+    // Login de Usuário
+    const loginForm = document.getElementById("login-form");
+    loginForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const email = document.getElementById("login-email").value;
+        const password = document.getElementById("login-password").value;
+        const loginMessage = document.getElementById("login-message");
+        try {
+            const userCredential = await signInWithEmailAndPassword(auth, email, password);
+            currentUser = userCredential.user;
+            currentToken = await currentUser.getIdToken();
+            loginMessage.innerText = "Login realizado com sucesso!";
+            document.getElementById("user-email").innerText = currentUser.email;
+            loginSection.classList.add("hidden");
+            document.getElementById("dashboard-section").classList.remove("hidden");
+            fetchSubjects(); // Carrega as matérias do usuário
+        } catch (error) {
+            loginMessage.innerText = "Erro no login: " + error.message;
+        }
+    });
+
+    // Função para criar matéria
+    const subjectForm = document.getElementById("subject-form");
+    subjectForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const subjectName = document.getElementById("subject-name").value;
+        const subjectMessage = document.getElementById("subject-message");
+        try {
+            const response = await fetch("http://localhost:3001/api/subjects", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": "Bearer " + currentToken
+                },
+                body: JSON.stringify({ name: subjectName })
+            });
+            const result = await response.json();
+            subjectMessage.innerText = "Matéria criada: " + JSON.stringify(result);
+            fetchSubjects();
+        } catch (error) {
+            subjectMessage.innerText = "Erro: " + error.message;
+        }
+    });
+
+    // Função para buscar matérias do usuário
+    async function fetchSubjects() {
+        try {
+            const response = await fetch("http://localhost:3001/api/subjects", {
+                headers: { "Authorization": "Bearer " + currentToken }
+            });
+            const subjects = await response.json();
+            const subjectList = document.getElementById("subject-list");
+            subjectList.innerHTML = "";
+            subjects.forEach(subject => {
+                const li = document.createElement("li");
+                li.innerText = subject.name;
+                li.onclick = () => {
+                    document.getElementById("selected-subject-name").innerText = subject.name;
+                    document.getElementById("selected-subject-id").value = subject.id;
+                    document.getElementById("topic-section").classList.remove("hidden");
+                    fetchTopics(subject.id);
+                };
+                subjectList.appendChild(li);
+            });
+        } catch (error) {
+            console.error("Erro ao buscar matérias:", error);
+        }
+    }
+
+    // Função para criar assunto em uma matéria
+    const topicForm = document.getElementById("topic-form");
+    topicForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const topicName = document.getElementById("topic-name").value;
+        const subjectId = document.getElementById("selected-subject-id").value;
+        const topicMessage = document.getElementById("topic-message");
+        try {
+            const response = await fetch(`http://localhost:3001/api/subjects/${subjectId}/topics`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": "Bearer " + currentToken
+                },
+                body: JSON.stringify({ name: topicName })
+            });
+            const result = await response.json();
+            topicMessage.innerText = "Assunto criado: " + JSON.stringify(result);
+            fetchTopics(subjectId);
+        } catch (error) {
+            topicMessage.innerText = "Erro: " + error.message;
+        }
+    });
+
+    // Função para buscar assuntos de uma matéria
+    async function fetchTopics(subjectId) {
+        try {
+            const response = await fetch(`http://localhost:3001/api/subjects/${subjectId}/topics`, {
+                headers: { "Authorization": "Bearer " + currentToken }
+            });
+            const topics = await response.json();
+            const topicList = document.getElementById("topic-list");
+            topicList.innerHTML = "";
+            topics.forEach(topic => {
+                const li = document.createElement("li");
+                li.innerText = topic.name;
+                li.onclick = () => {
+                    document.getElementById("selected-topic-name").innerText = topic.name;
+                    document.getElementById("selected-topic-id").value = topic.id;
+                    document.getElementById("hours-section").classList.remove("hidden");
+                };
+                topicList.appendChild(li);
+            });
+        } catch (error) {
+            console.error("Erro ao buscar assuntos:", error);
+        }
+    }
+
+    // Função para registrar horas para um assunto
+    const hoursForm = document.getElementById("hours-form");
+    hoursForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const hours = document.getElementById("hours-amount").value;
+        const subjectId = document.getElementById("selected-subject-id").value;
+        const topicId = document.getElementById("selected-topic-id").value;
+        const hoursMessage = document.getElementById("hours-message");
+        try {
+            const response = await fetch(`http://localhost:3001/api/subjects/${subjectId}/topics/${topicId}/hours`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": "Bearer " + currentToken
+                },
+                body: JSON.stringify({ hours: Number(hours) })
+            });
+            const result = await response.json();
+            hoursMessage.innerText = "Horas registradas: " + JSON.stringify(result);
+        } catch (error) {
+            hoursMessage.innerText = "Erro: " + error.message;
+        }
+    });
+</script>
+</body>
+</html>
