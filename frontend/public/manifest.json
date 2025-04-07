@@ -1,0 +1,9 @@
+{
+  "name": "StudyTrack",
+  "short_name": "StudyTrack",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "description": "App para controle de tempo de estudo",
+  "icons": []
+}
